@@ -1,11 +1,16 @@
 const axios = require('axios');
-
+const secret = require('../api/secret.js').jwtSecret;
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs');
+const User = require('../users/userModel.js');
+const userRoute = require('../users/userRouter');
 const { authenticate } = require('../auth/authenticate');
 
 module.exports = server => {
   server.post('/api/register', register);
   server.post('/api/login', login);
   server.get('/api/jokes', authenticate, getJokes);
+  server.get('/api/user', authenticate, userRoute);
 };
 
 function register(req, res) {
@@ -25,6 +30,22 @@ function register(req, res) {
 
 function login(req, res) {
   // implement user login
+  let { username, password } = req.body;
+    
+    User.findBy({ username })
+    .first()
+    .then(user => {
+        if (user && bcrypt.compareSync(password, user.password)) {
+            const token = generateToken(user);
+
+            res.status(200).json({ message: `Welcome ${user.username}`, token})
+        }else {
+            res.status(401).json({ message: 'Try Again'})
+        }
+    })
+    .catch(error => {
+        res.status(500).json(error)
+    })
 }
 
 function getJokes(req, res) {
